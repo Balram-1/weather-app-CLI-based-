@@ -4,21 +4,6 @@ import sys
 
 init(autoreset=True)
 
-def get_location():
-    """Detect user location based on IP address."""
-    try:
-        resp = requests.get("https://ipinfo.io/json", timeout=10)
-        data = resp.json()
-        city = data.get("city")
-        loc = data.get("loc")  # format: "lat,lon"
-        if loc:
-            lat, lon = loc.split(",")
-            return city, float(lat), float(lon)
-        else:
-            return None, None, None
-    except Exception as e:
-        print(Fore.RED + f"Could not detect location: {e}")
-        return None, None, None
 
 def geocode_city(city):
     """Get latitude and longitude for a city using Open-Meteo's geocoding API."""
