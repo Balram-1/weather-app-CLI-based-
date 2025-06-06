@@ -1,116 +1,116 @@
 import requests
-from colorama import init, Fore, Style
 import sys
+from colorama import init, Fore, Style
 
 init(autoreset=True)
 
+def print_banner():
+    banner = f"""
+{Fore.CYAN + Style.BRIGHT}=============================================
+            🌤️  Weather CLI App
+=============================================
+{Fore.WHITE}Commands:
+  ➤ Enter a city name to get weather
+  ➤ Type 'auto' to use your current location
+  ➤ Type 'exit' to quit the app
+"""
+    print(banner)
+
+def get_location():
+    """Detect user location based on IP address using ipinfo.io"""
+    try:
+        response = requests.get("https://ipinfo.io/json", timeout=10)
+        data = response.json()
+        city = data.get("city", "")
+        loc = data.get("loc", "")
+        if loc:
+            lat, lon = map(float, loc.split(","))
+            return city, "", lat, lon
+    except Exception as e:
+        print(Fore.RED + f"⚠️  Location detection failed: {e}")
+    return None, None, None, None
 
 def geocode_city(city):
-    """Get latitude and longitude for a city using Open-Meteo's geocoding API."""
+    """Use Open-Meteo API to convert city name to coordinates"""
     try:
-        resp = requests.get(
-            f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1",
-            timeout=10
-        )
-        data = resp.json()
-        results = data.get("results")
-        if results:
-            lat = results[0]["latitude"]
-            lon = results[0]["longitude"]
+        url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        if results := data.get("results"):
             city_name = results[0]["name"]
             country = results[0].get("country", "")
+            lat = results[0]["latitude"]
+            lon = results[0]["longitude"]
             return city_name, country, lat, lon
         else:
-            print(Fore.YELLOW + "City not found.")
-            return None, None, None, None
+            print(Fore.YELLOW + "⚠️  City not found.")
     except Exception as e:
-        print(Fore.RED + f"Error geocoding city: {e}")
-        return None, None, None, None
+        print(Fore.RED + f"⚠️  Geocoding failed: {e}")
+    return None, None, None, None
 
 def get_weather(lat, lon):
-    """Fetch current weather from Open-Meteo."""
+    """Fetch current weather from Open-Meteo"""
     try:
         url = (
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={lat}&longitude={lon}"
             f"&current=temperature_2m,apparent_temperature,weathercode,wind_speed_10m,relative_humidity_2m"
         )
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
-        current = data.get("current", {})
-        return current
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        return data.get("current")
     except Exception as e:
-        print(Fore.RED + f"Error fetching weather: {e}")
+        print(Fore.RED + f"⚠️  Weather fetch failed: {e}")
         return None
 
 def weather_icon(code):
-    """Return an ASCII weather icon based on Open-Meteo weather code."""
+    """Map weather codes to icons"""
     icons = {
-        0: "☀️",   # Clear sky
-        1: "🌤️",  # Mainly clear
-        2: "⛅",   # Partly cloudy
-        3: "☁️",   # Overcast
-        45: "🌫️", # Fog
-        48: "🌫️", # Depositing rime fog
-        51: "🌦️", # Drizzle: Light
-        53: "🌦️", # Drizzle: Moderate
-        55: "🌦️", # Drizzle: Dense
-        61: "🌧️", # Rain: Slight
-        63: "🌧️", # Rain: Moderate
-        65: "🌧️", # Rain: Heavy
-        71: "🌨️", # Snow fall: Slight
-        73: "🌨️", # Snow fall: Moderate
-        75: "🌨️", # Snow fall: Heavy
-        80: "🌦️", # Rain showers: Slight
-        81: "🌦️", # Rain showers: Moderate
-        82: "🌦️", # Rain showers: Violent
-        95: "⛈️", # Thunderstorm: Slight or moderate
-        96: "⛈️", # Thunderstorm with slight hail
-        99: "⛈️", # Thunderstorm with heavy hail
+        0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️", 45: "🌫️", 48: "🌫️",
+        51: "🌦️", 53: "🌦️", 55: "🌦️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
+        71: "🌨️", 73: "🌨️", 75: "🌨️", 80: "🌦️", 81: "🌦️", 82: "🌦️",
+        95: "⛈️", 96: "⛈️", 99: "⛈️"
     }
     return icons.get(code, "🌈")
 
-def print_banner():
-    print(Fore.CYAN + Style.BRIGHT + "=" * 45)
-    print(Fore.CYAN + Style.BRIGHT + "         Simple Weather CLI App")
-    print(Fore.CYAN + Style.BRIGHT + "=" * 45)
-    print(Fore.WHITE + "Type 'exit' to quit.")
-    print(Fore.WHITE + "Type 'auto' to use your current location.\n")
-
-def print_weather(city, country, weather):
-    temp = weather.get("temperature_2m")
-    feels = weather.get("apparent_temperature")
-    wind = weather.get("wind_speed_10m")
-    humidity = weather.get("relative_humidity_2m")
-    code = weather.get("weathercode")
-    icon = weather_icon(code)
-    print(Fore.YELLOW + Style.BRIGHT + f"\n{icon}  Weather for {city}, {country}:")
-    print(Fore.GREEN + f"  Temperature     : {temp}°C")
-    print(Fore.GREEN + f"  Feels Like      : {feels}°C")
-    print(Fore.BLUE + f"  Humidity        : {humidity}%")
-    print(Fore.MAGENTA + f"  Wind Speed      : {wind} m/s")
-    print(Fore.CYAN + f"  Weather Code    : {code}\n")
+def display_weather(city, country, weather):
+    """Format and display weather data"""
+    print(Fore.YELLOW + Style.BRIGHT + f"\n📍 Weather for {city}, {country}")
+    print("  " + "-" * 30)
+    print(f"  {weather_icon(weather.get('weathercode', 0))}  Temperature     : {weather.get('temperature_2m')}°C")
+    print(f"  🌡️  Feels Like      : {weather.get('apparent_temperature')}°C")
+    print(f"  💧  Humidity        : {weather.get('relative_humidity_2m')}%")
+    print(f"  💨  Wind Speed      : {weather.get('wind_speed_10m')} m/s")
+    print(f"  🔢  Weather Code    : {weather.get('weathercode')}")
+    print("  " + "-" * 30 + "\n")
 
 def main():
     print_banner()
     while True:
-        city_input = input(Fore.WHITE + "Enter city name (or 'auto'): ").strip()
-        if city_input.lower() == "exit":
-            print(Fore.CYAN + "Goodbye!")
+        user_input = input(Fore.GREEN + "🔍 Enter city ('auto' or 'exit'): ").strip().lower()
+        if user_input == "exit":
+            print(Fore.CYAN + "👋 Goodbye!")
             break
-        if city_input.lower() == "auto":
-            city, lat, lon = get_location()
-            country = ""
-            if not city or not lat or not lon:
-                print(Fore.RED + "Could not detect your location. Please enter a city.")
+
+        if user_input == "auto":
+            city, country, lat, lon = get_location()
+            if not lat or not lon:
+                print(Fore.RED + "⚠️  Could not detect location. Try manual entry.\n")
                 continue
         else:
-            city, country, lat, lon = geocode_city(city_input)
+            city, country, lat, lon = geocode_city(user_input)
             if not lat or not lon:
                 continue
+
         weather = get_weather(lat, lon)
         if weather:
-            print_weather(city, country, weather)
+            display_weather(city, country, weather)
+        else:
+            print(Fore.RED + "⚠️  Could not retrieve weather.\n")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(Fore.CYAN + "\n👋 Exiting gracefully...")
+        sys.exit()
